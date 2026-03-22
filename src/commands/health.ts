@@ -4,6 +4,16 @@ import { ConfigManager } from "../config/manager.js";
 import { spinner, color, printError } from "../output/ui.js";
 import type { OutputFormat } from "../output/formatter.js";
 
+/**
+ * Register the `health` command on the root program.
+ *
+ * The command pings the active Vibe Kanban instance and reports connectivity
+ * status. It exits with code `5` when the configured context is missing, or
+ * with the API error's exit code (defaulting to `1`) on network failure.
+ *
+ * @param program - The Commander root `Command` to attach the subcommand to.
+ * @param configManager - Provides context resolution and token lookup.
+ */
 export function registerHealthCommand(program: Command, configManager: ConfigManager): void {
   program
     .command("health")

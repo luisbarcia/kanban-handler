@@ -7,6 +7,15 @@ import { spinner, color, printError } from "../output/ui.js";
 import { toProjectId, toIssueId, toMemberId } from "../client/types.js";
 import type { IssueFilters } from "../client/types.js";
 
+/**
+ * Prompt the user for a yes/no confirmation on stderr.
+ *
+ * Writes `message (y/N) ` to stderr and reads a single line from stdin.
+ * Returns `true` only if the user types exactly `y` or `Y`.
+ *
+ * @param message - The question to display (without the `(y/N)` suffix).
+ * @returns `true` when the user confirms, `false` otherwise.
+ */
 async function confirm(message: string): Promise<boolean> {
   const rl = createInterface({ input: process.stdin, output: process.stderr });
   const answer = await rl.question(`${message} (y/N) `);
@@ -14,6 +23,17 @@ async function confirm(message: string): Promise<boolean> {
   return answer.toLowerCase() === "y";
 }
 
+/**
+ * Resolve the project ID to use for a command.
+ *
+ * Checks the `--project` flag first, then falls back to the `defaultProject`
+ * set on the active context. If neither is available, prints an error and
+ * exits with code `5`.
+ *
+ * @param opts - Command options object; the `project` property is optional.
+ * @param configManager - Used to look up the active context's default project.
+ * @returns The resolved project ID string.
+ */
 function resolveProjectId(opts: { project?: string }, configManager: ConfigManager): string {
   if (opts.project) return opts.project;
   const ctx = configManager.getCurrentContext();
@@ -22,6 +42,22 @@ function resolveProjectId(opts: { project?: string }, configManager: ConfigManag
   process.exit(5);
 }
 
+/**
+ * Register the `issues` command group on the root program.
+ *
+ * Exposes the following subcommands for full issue lifecycle management:
+ * - `issues list` — list issues with optional status/assignee filters and pagination.
+ * - `issues create` — create a new issue in a project.
+ * - `issues get <id>` — fetch details for a single issue.
+ * - `issues update <id>` — update title, description, priority, or status.
+ * - `issues delete <id>` — delete an issue (prompts for confirmation unless `--force`).
+ * - `issues assign <issueId> <memberId>` — assign a member to an issue.
+ * - `issues unassign <issueId> <memberId>` — remove a member assignment.
+ * - `issues move <id> <status>` — transition an issue to a new status.
+ *
+ * @param program - The Commander root `Command` to attach the subcommand to.
+ * @param configManager - Provides context and token resolution.
+ */
 export function registerIssuesCommand(program: Command, configManager: ConfigManager): void {
   const issues = program.command("issues").description("Manage issues");
 

@@ -6,6 +6,15 @@ import { formatOutput, formatSingle, type OutputFormat } from "../output/formatt
 import { spinner, color, printError } from "../output/ui.js";
 import { toIssueId, toWorkspaceId } from "../client/types.js";
 
+/**
+ * Prompt the user for a yes/no confirmation on stderr.
+ *
+ * Writes `message (y/N) ` to stderr and reads a single line from stdin.
+ * Returns `true` only if the user types exactly `y` or `Y`.
+ *
+ * @param message - The question to display (without the `(y/N)` suffix).
+ * @returns `true` when the user confirms, `false` otherwise.
+ */
 async function confirm(message: string): Promise<boolean> {
   const rl = createInterface({ input: process.stdin, output: process.stderr });
   const answer = await rl.question(`${message} (y/N) `);
@@ -13,6 +22,17 @@ async function confirm(message: string): Promise<boolean> {
   return answer.toLowerCase() === "y";
 }
 
+/**
+ * Register the `workspaces` command group on the root program.
+ *
+ * Exposes the following subcommands for managing workspaces:
+ * - `workspaces list` — list all workspaces with their associated issue and status.
+ * - `workspaces start <issueId>` — create a new workspace linked to an issue.
+ * - `workspaces delete <id>` — delete a workspace (prompts for confirmation unless `--force`).
+ *
+ * @param program - The Commander root `Command` to attach the subcommand to.
+ * @param configManager - Provides context and token resolution.
+ */
 export function registerWorkspacesCommand(program: Command, configManager: ConfigManager): void {
   const workspaces = program.command("workspaces").description("Manage workspaces");
 

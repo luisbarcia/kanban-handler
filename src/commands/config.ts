@@ -3,6 +3,19 @@ import { ConfigManager } from "../config/manager.js";
 import { formatOutput, formatSingle, type OutputFormat } from "../output/formatter.js";
 import { color, printError } from "../output/ui.js";
 
+/**
+ * Register the `config` command group on the root program.
+ *
+ * Exposes the following subcommands for managing named connection contexts:
+ * - `config add-context <name>` — create a new context with URL and JWT token.
+ * - `config use-context <name>` — switch the active context.
+ * - `config list-contexts` — display all contexts, marking the active one.
+ * - `config remove-context <name>` — delete a stored context.
+ * - `config show` — display the details of the currently active context.
+ *
+ * @param program - The Commander root `Command` to attach the subcommand to.
+ * @param configManager - Provides context CRUD and persistence.
+ */
 export function registerConfigCommand(program: Command, configManager: ConfigManager): void {
   const config = program.command("config").description("Manage Vibe Kanban contexts");
 

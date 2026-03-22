@@ -1,0 +1,576 @@
+openapi: 3.1.0
+info:
+  title: Vibe Kanban REST API
+  description: |
+    REST API endpoints consumed by the kanban-handler CLI.
+    Endpoints inferred from the Vibe Kanban Axum (Rust) server source code.
+    Subject to validation against live instances.
+  version: 0.1.0
+  contact:
+    name: kanban-handler
+servers:
+  - url: https://kanban.servs.dev
+    description: Self-hosted production instance
+  - url: http://localhost:9119
+    description: Local development instance
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Issue:
+      type: object
+      required: [id, title, status, projectId, assignees, tags, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          description: Unique issue identifier
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        projectId:
+          type: string
+        assignees:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Project:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    Tag:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        color:
+          type: string
+
+    Workspace:
+      type: object
+      required: [id, issueId, status]
+      properties:
+        id:
+          type: string
+        issueId:
+          type: string
+        status:
+          type: string
+
+    Session:
+      type: object
+      required: [id, workspaceId, status]
+      properties:
+        id:
+          type: string
+        workspaceId:
+          type: string
+        status:
+          type: string
+
+    Execution:
+      type: object
+      required: [id, sessionId, status]
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+        status:
+          type: string
+        output:
+          type: string
+
+    HealthStatus:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        version:
+          type: string
+
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data: {}
+        error_data:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+
+    CreateIssueInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+        projectId:
+          type: string
+
+    UpdateIssueInput:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+
+paths:
+  /api/health:
+    get:
+      operationId: health
+      summary: Check instance health
+      tags: [Health]
+      responses:
+        "200":
+          description: Instance is healthy
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/HealthStatus"
+
+  /api/projects:
+    get:
+      operationId: listProjects
+      summary: List all projects
+      tags: [Projects]
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Project"
+
+  /api/issues:
+    get:
+      operationId: listIssues
+      summary: List issues with filters and pagination
+      tags: [Issues]
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: assignee
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Paginated list of issues
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Issue"
+    post:
+      operationId: createIssue
+      summary: Create a new issue
+      tags: [Issues]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIssueInput"
+      responses:
+        "201":
+          description: Issue created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Issue"
+
+  /api/issues/{id}:
+    get:
+      operationId: getIssue
+      summary: Get issue details
+      tags: [Issues]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Issue details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Issue"
+        "404":
+          description: Issue not found
+    patch:
+      operationId: updateIssue
+      summary: Update an issue
+      tags: [Issues]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIssueInput"
+      responses:
+        "200":
+          description: Issue updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Issue"
+    delete:
+      operationId: deleteIssue
+      summary: Delete an issue
+      tags: [Issues]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Issue deleted
+
+  /api/issues/{issueId}/assignees:
+    post:
+      operationId: assignIssue
+      summary: Assign a member to an issue
+      tags: [Issues]
+      parameters:
+        - name: issueId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberId]
+              properties:
+                memberId:
+                  type: string
+      responses:
+        "200":
+          description: Member assigned
+
+  /api/issues/{issueId}/assignees/{memberId}:
+    delete:
+      operationId: unassignIssue
+      summary: Unassign a member from an issue
+      tags: [Issues]
+      parameters:
+        - name: issueId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Member unassigned
+
+  /api/tags:
+    get:
+      operationId: listTags
+      summary: List all tags
+      tags: [Tags]
+      responses:
+        "200":
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Tag"
+
+  /api/issues/{issueId}/tags:
+    post:
+      operationId: addTag
+      summary: Add a tag to an issue
+      tags: [Tags]
+      parameters:
+        - name: issueId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tagId]
+              properties:
+                tagId:
+                  type: string
+      responses:
+        "200":
+          description: Tag added
+
+  /api/issues/{issueId}/tags/{tagId}:
+    delete:
+      operationId: removeTag
+      summary: Remove a tag from an issue
+      tags: [Tags]
+      parameters:
+        - name: issueId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tagId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Tag removed
+
+  /api/workspaces:
+    get:
+      operationId: listWorkspaces
+      summary: List all workspaces
+      tags: [Workspaces]
+      responses:
+        "200":
+          description: List of workspaces
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Workspace"
+    post:
+      operationId: startWorkspace
+      summary: Start a new workspace for an issue
+      tags: [Workspaces]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [issueId]
+              properties:
+                issueId:
+                  type: string
+      responses:
+        "201":
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Workspace"
+
+  /api/workspaces/{id}:
+    delete:
+      operationId: deleteWorkspace
+      summary: Delete a workspace
+      tags: [Workspaces]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Workspace deleted
+
+  /api/workspaces/{workspaceId}/sessions:
+    get:
+      operationId: listSessions
+      summary: List sessions in a workspace
+      tags: [Sessions]
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Session"
+    post:
+      operationId: createSession
+      summary: Create a new session in a workspace
+      tags: [Sessions]
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Session"
+
+  /api/sessions/{sessionId}/follow-up:
+    post:
+      operationId: runSessionPrompt
+      summary: Send a prompt to an active session
+      tags: [Sessions]
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prompt]
+              properties:
+                prompt:
+                  type: string
+      responses:
+        "200":
+          description: Execution result
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Execution"

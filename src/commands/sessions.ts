@@ -5,6 +5,15 @@ import { formatOutput, formatSingle, type OutputFormat } from "../output/formatt
 import { spinner, color, printError } from "../output/ui.js";
 import { toWorkspaceId, toSessionId } from "../client/types.js";
 
+/**
+ * Read all data from `process.stdin` and return it as a trimmed UTF-8 string.
+ *
+ * Intended for use when the caller wants to accept piped input (e.g. a prompt
+ * message). The caller is responsible for verifying that stdin is not a TTY
+ * before invoking this function.
+ *
+ * @returns The complete stdin contents, whitespace-trimmed.
+ */
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) {
@@ -13,6 +22,18 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf-8").trim();
 }
 
+/**
+ * Register the `sessions` command group on the root program.
+ *
+ * Exposes the following subcommands for managing AI sessions within workspaces:
+ * - `sessions list <workspaceId>` — list all sessions in a workspace.
+ * - `sessions create <workspaceId>` — create a new session in a workspace.
+ * - `sessions prompt <sessionId>` — send a prompt to a session; accepts the
+ *   message via `--message` or from stdin when input is piped.
+ *
+ * @param program - The Commander root `Command` to attach the subcommand to.
+ * @param configManager - Provides context and token resolution.
+ */
 export function registerSessionsCommand(program: Command, configManager: ConfigManager): void {
   const sessions = program.command("sessions").description("Manage sessions");
 

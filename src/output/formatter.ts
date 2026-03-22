@@ -1,8 +1,32 @@
 import Table from "cli-table3";
 import { color } from "./ui.js";
 
+/**
+ * Supported output formats for CLI commands.
+ *
+ * - `"table"` — human-readable ASCII table with bold headers (default).
+ * - `"json"` — pretty-printed JSON, suitable for piping to `jq`.
+ * - `"minimal"` — plain text with one value per line; useful for scripting.
+ */
 export type OutputFormat = "table" | "json" | "minimal";
 
+/**
+ * Format a list of records for CLI output.
+ *
+ * Renders the provided items using the requested format. For `"table"` and
+ * `"minimal"`, only the fields listed in `columns` are included; `"json"`
+ * serialises the full item objects.
+ *
+ * @param items - Array of data records to render.
+ * @param columns - Ordered list of property names to display. For `"minimal"`,
+ *   only the first column is used.
+ * @param format - Output format; defaults to `"table"`.
+ * @returns The formatted string ready to be written to stdout.
+ *
+ * @example
+ * console.log(formatOutput(projects, ["id", "name"], "table"));
+ * console.log(formatOutput(projects, ["id", "name"], "json"));
+ */
 export function formatOutput(
   items: Record<string, unknown>[],
   columns: string[],
@@ -26,6 +50,20 @@ export function formatOutput(
   }
 }
 
+/**
+ * Format a single record for CLI output.
+ *
+ * For `"table"` mode each key-value pair is rendered as `bold(key): value` on
+ * its own line. `"json"` serialises the whole object; `"minimal"` returns only
+ * the first value as a plain string.
+ *
+ * @param item - The data record to render.
+ * @param format - Output format; defaults to `"table"`.
+ * @returns The formatted string ready to be written to stdout.
+ *
+ * @example
+ * console.log(formatSingle(issue, opts.output));
+ */
 export function formatSingle(
   item: Record<string, unknown>,
   format: OutputFormat = "table",

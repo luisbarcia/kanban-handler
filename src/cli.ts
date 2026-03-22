@@ -9,6 +9,23 @@ import { registerWorkspacesCommand } from "./commands/workspaces.js";
 import { registerSessionsCommand } from "./commands/sessions.js";
 import { printError, setNoColor } from "./output/ui.js";
 
+/**
+ * Build and configure the root `kanban` CLI program.
+ *
+ * Registers all sub-command groups (`health`, `config`, `projects`, `issues`,
+ * `tags`, `workspaces`, `sessions`) and attaches global options such as
+ * `--context`, `--token`, `--output`, `--no-color`, and `--verbose`.
+ *
+ * A `preAction` hook applies `--no-color` before any command executes.
+ * `exitOverride` is enabled so that errors throw instead of calling
+ * `process.exit`, enabling programmatic use in tests.
+ *
+ * @returns The fully configured Commander `Command` instance.
+ *
+ * @example
+ * const program = createProgram();
+ * await program.parseAsync(process.argv);
+ */
 export function createProgram(): Command {
   const program = new Command();
   const configManager = ConfigManager.create();

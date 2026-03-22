@@ -4,6 +4,15 @@ import { KanbanClient } from "../client/api-client.js";
 import { formatOutput, type OutputFormat } from "../output/formatter.js";
 import { spinner, printError } from "../output/ui.js";
 
+/**
+ * Register the `projects` command group on the root program.
+ *
+ * Exposes the following subcommands:
+ * - `projects list` — list all projects visible to the authenticated user.
+ *
+ * @param program - The Commander root `Command` to attach the subcommand to.
+ * @param configManager - Provides context and token resolution.
+ */
 export function registerProjectsCommand(program: Command, configManager: ConfigManager): void {
   const projects = program.command("projects").description("Manage projects");
 

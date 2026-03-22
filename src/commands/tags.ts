@@ -5,6 +5,17 @@ import { formatOutput, type OutputFormat } from "../output/formatter.js";
 import { spinner, color, printError } from "../output/ui.js";
 import { toIssueId, toTagId } from "../client/types.js";
 
+/**
+ * Register the `tags` command group on the root program.
+ *
+ * Exposes the following subcommands for managing issue tags:
+ * - `tags list` — list all tags available in the active workspace.
+ * - `tags add <issueId> <tagId>` — attach a tag to an issue.
+ * - `tags remove <issueId> <tagId>` — detach a tag from an issue.
+ *
+ * @param program - The Commander root `Command` to attach the subcommand to.
+ * @param configManager - Provides context and token resolution.
+ */
 export function registerTagsCommand(program: Command, configManager: ConfigManager): void {
   const tags = program.command("tags").description("Manage tags");
 
