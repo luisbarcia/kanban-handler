@@ -48,10 +48,13 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
         const filters: IssueFilters = {};
         if (cmdOpts.status) filters.status = cmdOpts.status;
         if (cmdOpts.assignee) filters.assignee = toMemberId(cmdOpts.assignee);
+        const pagination: import("../client/types.js").PaginationParams = {};
+        if (cmdOpts.limit !== undefined) pagination.limit = cmdOpts.limit;
+        if (cmdOpts.page !== undefined) pagination.page = cmdOpts.page;
         const s = spinner("Fetching issues..."); s.start();
-        const data = await client.listIssues(toProjectId(projectId), filters, { limit: cmdOpts.limit, page: cmdOpts.page });
+        const data = await client.listIssues(toProjectId(projectId), filters, pagination);
         s.stop();
-        console.log(formatOutput(data.items as unknown as Record<string, unknown>[], ["id", "title", "status", "priority"], opts.output));
+        console.log(formatOutput(data as unknown as Record<string, unknown>[], ["id", "title", "status", "priority"], opts.output));
       } catch (err) {
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
@@ -68,8 +71,12 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
       const { client, opts } = getClientAndOpts();
       try {
         const projectId = resolveProjectId(cmdOpts, configManager);
+        const createInput: import("../client/types.js").CreateIssueInput = { title: cmdOpts.title };
+        if (cmdOpts.description !== undefined) createInput.description = cmdOpts.description;
+        if (cmdOpts.priority !== undefined) createInput.priority = cmdOpts.priority;
+        if (cmdOpts.status !== undefined) createInput.status = cmdOpts.status;
         const s = spinner("Creating issue..."); s.start();
-        const issue = await client.createIssue(toProjectId(projectId), { title: cmdOpts.title, description: cmdOpts.description, priority: cmdOpts.priority, status: cmdOpts.status });
+        const issue = await client.createIssue(toProjectId(projectId), createInput);
         s.stop();
         console.log(color.success(`Issue created: ${issue.id}`));
         console.log(formatSingle(issue as unknown as Record<string, unknown>, opts.output));
@@ -101,8 +108,13 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
     .action(async (id: string, cmdOpts: { title?: string; description?: string; priority?: string; status?: string }) => {
       const { client, opts } = getClientAndOpts();
       try {
+        const updateInput: import("../client/types.js").UpdateIssueInput = {};
+        if (cmdOpts.title !== undefined) updateInput.title = cmdOpts.title;
+        if (cmdOpts.description !== undefined) updateInput.description = cmdOpts.description;
+        if (cmdOpts.priority !== undefined) updateInput.priority = cmdOpts.priority;
+        if (cmdOpts.status !== undefined) updateInput.status = cmdOpts.status;
         const s = spinner("Updating issue..."); s.start();
-        const issue = await client.updateIssue(toIssueId(id), { title: cmdOpts.title, description: cmdOpts.description, priority: cmdOpts.priority, status: cmdOpts.status });
+        const issue = await client.updateIssue(toIssueId(id), updateInput);
         s.stop();
         console.log(color.success(`Issue ${id} updated.`));
         console.log(formatSingle(issue as unknown as Record<string, unknown>, opts.output));

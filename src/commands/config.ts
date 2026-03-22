@@ -13,11 +13,9 @@ export function registerConfigCommand(program: Command, configManager: ConfigMan
     .requiredOption("--token <token>", "JWT token")
     .option("--default-project <id>", "Default project ID")
     .action((name: string, opts: { url: string; token: string; defaultProject?: string }) => {
-      configManager.addContext(name, {
-        url: opts.url,
-        token: opts.token,
-        defaultProject: opts.defaultProject,
-      });
+      const ctx: import("../config/manager.js").ContextConfig = { url: opts.url, token: opts.token };
+      if (opts.defaultProject !== undefined) ctx.defaultProject = opts.defaultProject;
+      configManager.addContext(name, ctx);
       console.log(color.success(`Context '${name}' added.`));
     });
 
