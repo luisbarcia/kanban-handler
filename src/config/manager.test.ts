@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { ConfigManager } from "./manager.js";
 import type { ContextConfig } from "./manager.js";
 

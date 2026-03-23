@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { KanbanClient } from "./api-client.js";
-import { toProjectId, toIssueId, toMemberId } from "./types.js";
+import { toIssueId } from "./types.js";
 import { AuthError, ApiError, NetworkError, NotFoundError } from "../utils/errors.js";
 
 describe("KanbanClient", () => {

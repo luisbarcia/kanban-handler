@@ -164,7 +164,7 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
     .action(async (id: string, cmdOpts: { force?: boolean }) => {
       const s = spinner("Deleting issue...");
       try {
-        const { client, opts } = getClientAndOpts();
+        const { client } = getClientAndOpts();
         if (!cmdOpts.force) {
           const ok = await confirm(`Delete issue ${id}?`);
           if (!ok) { console.log("Aborted."); return; }
@@ -185,7 +185,7 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
     .action(async (issueId: string, memberId: string) => {
       const s = spinner("Assigning...");
       try {
-        const { client, opts } = getClientAndOpts();
+        const { client } = getClientAndOpts();
         s.start();
         await client.assignIssue(toIssueId(issueId), toMemberId(memberId));
         s.stop();
@@ -202,7 +202,7 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
     .action(async (issueId: string, memberId: string) => {
       const s = spinner("Unassigning...");
       try {
-        const { client, opts } = getClientAndOpts();
+        const { client } = getClientAndOpts();
         s.start();
         await client.unassignIssue(toIssueId(issueId), toMemberId(memberId));
         s.stop();

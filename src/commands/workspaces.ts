@@ -72,7 +72,7 @@ export function registerWorkspacesCommand(program: Command, configManager: Confi
     .action(async (id: string, cmdOpts: { force?: boolean }) => {
       const s = spinner("Deleting workspace...");
       try {
-        const { client, opts } = getClientAndOpts();
+        const { client } = getClientAndOpts();
         if (!cmdOpts.force) {
           const ok = await confirm(`Delete workspace ${id}?`);
           if (!ok) { console.log("Aborted."); return; }

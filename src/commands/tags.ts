@@ -52,7 +52,7 @@ export function registerTagsCommand(program: Command, configManager: ConfigManag
     .action(async (issueId: string, tagId: string) => {
       const s = spinner("Adding tag...");
       try {
-        const { client, opts } = getClientAndOpts();
+        const { client } = getClientAndOpts();
         s.start();
         await client.addTag(toIssueId(issueId), toTagId(tagId));
         s.stop();
@@ -69,7 +69,7 @@ export function registerTagsCommand(program: Command, configManager: ConfigManag
     .action(async (issueId: string, tagId: string) => {
       const s = spinner("Removing tag...");
       try {
-        const { client, opts } = getClientAndOpts();
+        const { client } = getClientAndOpts();
         s.start();
         await client.removeTag(toIssueId(issueId), toTagId(tagId));
         s.stop();

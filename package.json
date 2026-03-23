@@ -3,8 +3,12 @@
   "version": "0.1.0",
   "description": "CLI tool for managing Kanban boards via API",
   "type": "module",
-  "bin": { "kanban": "./dist/index.js" },
-  "engines": { "node": ">=18.0.0" },
+  "bin": {
+    "kanban": "./dist/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -14,7 +18,13 @@
     "format": "prettier --write src/",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["kanban", "cli", "vibe-kanban", "project-management", "self-hosted"],
+  "keywords": [
+    "kanban",
+    "cli",
+    "vibe-kanban",
+    "project-management",
+    "self-hosted"
+  ],
   "author": "Luis Barcia",
   "license": "MIT",
   "dependencies": {
@@ -26,6 +36,7 @@
     "ora": "^9.3.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^25.5.0",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
@@ -33,6 +44,7 @@
     "prettier": "^3.8.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.1",
     "vitest": "^4.1.0"
   }
 }
