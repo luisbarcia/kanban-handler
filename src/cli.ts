@@ -1,5 +1,8 @@
 import { Command } from "commander";
+import { readFileSync } from "node:fs";
 import { ConfigManager } from "./config/manager.js";
+
+const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
 import { registerHealthCommand } from "./commands/health.js";
 import { registerConfigCommand } from "./commands/config.js";
 import { registerProjectsCommand } from "./commands/projects.js";
@@ -33,7 +36,9 @@ export function createProgram(): Command {
   program
     .name("kanban")
     .description("CLI for managing Vibe Kanban boards on self-hosted instances")
-    .version("0.1.0")
+    .version(pkg.version)
+    .enablePositionalOptions()
+    .passThroughOptions()
     .option("--context <name>", "Override active context")
     .option("--token <jwt>", "Override authentication token")
     .option("--output <format>", "Output format: table, json, minimal", "table")
