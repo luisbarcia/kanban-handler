@@ -43,12 +43,8 @@ export class ConfigManager {
     const store = new Conf<StoreSchema>({
       projectName: "kanban-handler",
       defaults: { currentContext: "", contexts: {} },
+      configFileMode: 0o600,
     });
-    // RNF-03: Set config file permissions to 600 on Unix
-    if (process.platform !== "win32") {
-      const configPath = store.path;
-      import("node:fs").then(fs => fs.chmodSync(configPath, 0o600)).catch(() => {});
-    }
     return new ConfigManager(store, false);
   }
 

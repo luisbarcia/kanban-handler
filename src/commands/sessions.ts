@@ -4,6 +4,7 @@ import { KanbanClient } from "../client/api-client.js";
 import { formatOutput, formatSingle, type OutputFormat } from "../output/formatter.js";
 import { spinner, color, printError } from "../output/ui.js";
 import { toWorkspaceId, toSessionId } from "../client/types.js";
+import { ConfigError } from "../utils/errors.js";
 
 /**
  * Read all data from `process.stdin` and return it as a trimmed UTF-8 string.
@@ -41,19 +42,25 @@ export function registerSessionsCommand(program: Command, configManager: ConfigM
     const opts = program.opts<{ context?: string; token?: string; output?: OutputFormat; verbose?: boolean }>();
     const contextName = configManager.resolveContextName(opts.context, process.env["KANBAN_CONTEXT"]);
     const ctx = configManager.getContext(contextName);
-    if (!ctx) { printError(`Context '${contextName}' not found.`); process.exit(5); }
+    if (!ctx) {
+      throw new ConfigError(`Context '${contextName}' not found. Use 'kanban config add-context' to add one.`);
+    }
     const token = configManager.resolveToken(opts.token, process.env["KANBAN_TOKEN"]);
     return { client: new KanbanClient(ctx.url, token), opts };
   };
 
   sessions.command("list <workspaceId>").description("List sessions in a workspace")
     .action(async (workspaceId: string) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Fetching sessions...");
       try {
-        const s = spinner("Fetching sessions..."); s.start();
-        const data = await client.listSessions(toWorkspaceId(workspaceId)); s.stop();
+        const { client, opts } = getClientAndOpts();
+        s.start();
+        const data = await client.listSessions(toWorkspaceId(workspaceId));
+        s.stop();
         console.log(formatOutput(data as unknown as Record<string, unknown>[], ["id", "workspaceId", "status"], opts.output));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }
@@ -61,13 +68,17 @@ export function registerSessionsCommand(program: Command, configManager: ConfigM
 
   sessions.command("create <workspaceId>").description("Create a new session in a workspace")
     .action(async (workspaceId: string) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Creating session...");
       try {
-        const s = spinner("Creating session..."); s.start();
-        const session = await client.createSession(toWorkspaceId(workspaceId)); s.stop();
+        const { client, opts } = getClientAndOpts();
+        s.start();
+        const session = await client.createSession(toWorkspaceId(workspaceId));
+        s.stop();
         console.log(color.success(`Session created: ${session.id}`));
         console.log(formatSingle(session as unknown as Record<string, unknown>, opts.output));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }
@@ -76,8 +87,9 @@ export function registerSessionsCommand(program: Command, configManager: ConfigM
   sessions.command("prompt <sessionId>").description("Send a prompt to a session")
     .option("--message <text>", "Prompt message (reads from stdin if not provided)")
     .action(async (sessionId: string, cmdOpts: { message?: string }) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Sending prompt...");
       try {
+        const { client, opts } = getClientAndOpts();
         let message: string;
         if (cmdOpts.message) {
           message = cmdOpts.message;
@@ -89,10 +101,13 @@ export function registerSessionsCommand(program: Command, configManager: ConfigM
           message = await readStdin();
           if (!message) { printError("Empty input from stdin."); process.exit(1); }
         }
-        const s = spinner("Sending prompt..."); s.start();
-        const execution = await client.runSessionPrompt(toSessionId(sessionId), message); s.stop();
+        s.start();
+        const execution = await client.runSessionPrompt(toSessionId(sessionId), message);
+        s.stop();
         console.log(formatSingle(execution as unknown as Record<string, unknown>, opts.output));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }

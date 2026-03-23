@@ -1,27 +1,12 @@
 import type { Command } from "commander";
-import { createInterface } from "node:readline/promises";
 import { ConfigManager } from "../config/manager.js";
 import { KanbanClient } from "../client/api-client.js";
 import { formatOutput, formatSingle, type OutputFormat } from "../output/formatter.js";
 import { spinner, color, printError } from "../output/ui.js";
 import { toProjectId, toIssueId, toMemberId } from "../client/types.js";
 import type { IssueFilters } from "../client/types.js";
-
-/**
- * Prompt the user for a yes/no confirmation on stderr.
- *
- * Writes `message (y/N) ` to stderr and reads a single line from stdin.
- * Returns `true` only if the user types exactly `y` or `Y`.
- *
- * @param message - The question to display (without the `(y/N)` suffix).
- * @returns `true` when the user confirms, `false` otherwise.
- */
-async function confirm(message: string): Promise<boolean> {
-  const rl = createInterface({ input: process.stdin, output: process.stderr });
-  const answer = await rl.question(`${message} (y/N) `);
-  rl.close();
-  return answer.toLowerCase() === "y";
-}
+import { confirm } from "../utils/prompt.js";
+import { ConfigError } from "../utils/errors.js";
 
 /**
  * Resolve the project ID to use for a command.
@@ -65,7 +50,9 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
     const opts = program.opts<{ context?: string; token?: string; output?: OutputFormat; verbose?: boolean }>();
     const contextName = configManager.resolveContextName(opts.context, process.env["KANBAN_CONTEXT"]);
     const ctx = configManager.getContext(contextName);
-    if (!ctx) { printError(`Context '${contextName}' not found.`); process.exit(5); }
+    if (!ctx) {
+      throw new ConfigError(`Context '${contextName}' not found. Use 'kanban config add-context' to add one.`);
+    }
     const token = configManager.resolveToken(opts.token, process.env["KANBAN_TOKEN"]);
     const client = new KanbanClient(ctx.url, token);
     return { client, opts };
@@ -78,8 +65,9 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
     .option("--limit <n>", "Items per page", parseInt)
     .option("--page <n>", "Page number", parseInt)
     .action(async (cmdOpts: { project?: string; status?: string; assignee?: string; limit?: number; page?: number }) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Fetching issues...");
       try {
+        const { client, opts } = getClientAndOpts();
         const projectId = resolveProjectId(cmdOpts, configManager);
         const filters: IssueFilters = {};
         if (cmdOpts.status) filters.status = cmdOpts.status;
@@ -87,11 +75,13 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
         const pagination: import("../client/types.js").PaginationParams = {};
         if (cmdOpts.limit !== undefined) pagination.limit = cmdOpts.limit;
         if (cmdOpts.page !== undefined) pagination.page = cmdOpts.page;
-        const s = spinner("Fetching issues..."); s.start();
+        s.start();
         const data = await client.listIssues(toProjectId(projectId), filters, pagination);
         s.stop();
         console.log(formatOutput(data as unknown as Record<string, unknown>[], ["id", "title", "status", "priority"], opts.output));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }
@@ -104,19 +94,22 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
     .option("--priority <level>", "Priority level")
     .option("--status <status>", "Initial status")
     .action(async (cmdOpts: { title: string; project?: string; description?: string; priority?: string; status?: string }) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Creating issue...");
       try {
+        const { client, opts } = getClientAndOpts();
         const projectId = resolveProjectId(cmdOpts, configManager);
         const createInput: import("../client/types.js").CreateIssueInput = { title: cmdOpts.title };
         if (cmdOpts.description !== undefined) createInput.description = cmdOpts.description;
         if (cmdOpts.priority !== undefined) createInput.priority = cmdOpts.priority;
         if (cmdOpts.status !== undefined) createInput.status = cmdOpts.status;
-        const s = spinner("Creating issue..."); s.start();
+        s.start();
         const issue = await client.createIssue(toProjectId(projectId), createInput);
         s.stop();
         console.log(color.success(`Issue created: ${issue.id}`));
         console.log(formatSingle(issue as unknown as Record<string, unknown>, opts.output));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }
@@ -124,13 +117,16 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
 
   issues.command("get <id>").description("Get issue details")
     .action(async (id: string) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Fetching issue...");
       try {
-        const s = spinner("Fetching issue..."); s.start();
+        const { client, opts } = getClientAndOpts();
+        s.start();
         const issue = await client.getIssue(toIssueId(id));
         s.stop();
         console.log(formatSingle(issue as unknown as Record<string, unknown>, opts.output));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }
@@ -142,19 +138,22 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
     .option("--priority <level>", "New priority")
     .option("--status <status>", "New status")
     .action(async (id: string, cmdOpts: { title?: string; description?: string; priority?: string; status?: string }) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Updating issue...");
       try {
+        const { client, opts } = getClientAndOpts();
         const updateInput: import("../client/types.js").UpdateIssueInput = {};
         if (cmdOpts.title !== undefined) updateInput.title = cmdOpts.title;
         if (cmdOpts.description !== undefined) updateInput.description = cmdOpts.description;
         if (cmdOpts.priority !== undefined) updateInput.priority = cmdOpts.priority;
         if (cmdOpts.status !== undefined) updateInput.status = cmdOpts.status;
-        const s = spinner("Updating issue..."); s.start();
+        s.start();
         const issue = await client.updateIssue(toIssueId(id), updateInput);
         s.stop();
         console.log(color.success(`Issue ${id} updated.`));
         console.log(formatSingle(issue as unknown as Record<string, unknown>, opts.output));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }
@@ -163,17 +162,20 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
   issues.command("delete <id>").description("Delete an issue")
     .option("--force", "Skip confirmation")
     .action(async (id: string, cmdOpts: { force?: boolean }) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Deleting issue...");
       try {
+        const { client, opts } = getClientAndOpts();
         if (!cmdOpts.force) {
           const ok = await confirm(`Delete issue ${id}?`);
           if (!ok) { console.log("Aborted."); return; }
         }
-        const s = spinner("Deleting issue..."); s.start();
+        s.start();
         await client.deleteIssue(toIssueId(id));
         s.stop();
         console.log(color.success(`Issue ${id} deleted.`));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }
@@ -181,13 +183,16 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
 
   issues.command("assign <issueId> <memberId>").description("Assign a member to an issue")
     .action(async (issueId: string, memberId: string) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Assigning...");
       try {
-        const s = spinner("Assigning..."); s.start();
+        const { client, opts } = getClientAndOpts();
+        s.start();
         await client.assignIssue(toIssueId(issueId), toMemberId(memberId));
         s.stop();
         console.log(color.success(`Member ${memberId} assigned to issue ${issueId}.`));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }
@@ -195,13 +200,16 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
 
   issues.command("unassign <issueId> <memberId>").description("Unassign a member from an issue")
     .action(async (issueId: string, memberId: string) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Unassigning...");
       try {
-        const s = spinner("Unassigning..."); s.start();
+        const { client, opts } = getClientAndOpts();
+        s.start();
         await client.unassignIssue(toIssueId(issueId), toMemberId(memberId));
         s.stop();
         console.log(color.success(`Member ${memberId} unassigned from issue ${issueId}.`));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }
@@ -209,14 +217,17 @@ export function registerIssuesCommand(program: Command, configManager: ConfigMan
 
   issues.command("move <id> <status>").description("Move issue to a new status")
     .action(async (id: string, status: string) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Moving issue...");
       try {
-        const s = spinner("Moving issue..."); s.start();
+        const { client, opts } = getClientAndOpts();
+        s.start();
         const issue = await client.moveIssue(toIssueId(id), status);
         s.stop();
         console.log(color.success(`Issue ${id} moved to '${status}'.`));
         console.log(formatSingle(issue as unknown as Record<string, unknown>, opts.output));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }

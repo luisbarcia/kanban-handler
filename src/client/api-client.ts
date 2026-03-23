@@ -101,8 +101,15 @@ export class KanbanClient {
           throw new ApiError(message, response.status);
         }
 
+        if (response.status === 204 || response.headers?.get('content-length') === '0') {
+          return undefined as T;
+        }
+
         const body = await response.json() as ApiResponse<T>;
-        return body.data as T;
+        if (body.data === undefined) {
+          return undefined as T;
+        }
+        return body.data;
       } catch (err) {
         clearTimeout(timer);
 

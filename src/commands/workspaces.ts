@@ -1,26 +1,11 @@
 import type { Command } from "commander";
-import { createInterface } from "node:readline/promises";
 import { ConfigManager } from "../config/manager.js";
 import { KanbanClient } from "../client/api-client.js";
 import { formatOutput, formatSingle, type OutputFormat } from "../output/formatter.js";
 import { spinner, color, printError } from "../output/ui.js";
 import { toIssueId, toWorkspaceId } from "../client/types.js";
-
-/**
- * Prompt the user for a yes/no confirmation on stderr.
- *
- * Writes `message (y/N) ` to stderr and reads a single line from stdin.
- * Returns `true` only if the user types exactly `y` or `Y`.
- *
- * @param message - The question to display (without the `(y/N)` suffix).
- * @returns `true` when the user confirms, `false` otherwise.
- */
-async function confirm(message: string): Promise<boolean> {
-  const rl = createInterface({ input: process.stdin, output: process.stderr });
-  const answer = await rl.question(`${message} (y/N) `);
-  rl.close();
-  return answer.toLowerCase() === "y";
-}
+import { ConfigError } from "../utils/errors.js";
+import { confirm } from "../utils/prompt.js";
 
 /**
  * Register the `workspaces` command group on the root program.
@@ -40,19 +25,25 @@ export function registerWorkspacesCommand(program: Command, configManager: Confi
     const opts = program.opts<{ context?: string; token?: string; output?: OutputFormat; verbose?: boolean }>();
     const contextName = configManager.resolveContextName(opts.context, process.env["KANBAN_CONTEXT"]);
     const ctx = configManager.getContext(contextName);
-    if (!ctx) { printError(`Context '${contextName}' not found.`); process.exit(5); }
+    if (!ctx) {
+      throw new ConfigError(`Context '${contextName}' not found. Use 'kanban config add-context' to add one.`);
+    }
     const token = configManager.resolveToken(opts.token, process.env["KANBAN_TOKEN"]);
     return { client: new KanbanClient(ctx.url, token), opts };
   };
 
   workspaces.command("list").description("List all workspaces")
     .action(async () => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Fetching workspaces...");
       try {
-        const s = spinner("Fetching workspaces..."); s.start();
-        const data = await client.listWorkspaces(); s.stop();
+        const { client, opts } = getClientAndOpts();
+        s.start();
+        const data = await client.listWorkspaces();
+        s.stop();
         console.log(formatOutput(data as unknown as Record<string, unknown>[], ["id", "issueId", "status"], opts.output));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }
@@ -60,13 +51,17 @@ export function registerWorkspacesCommand(program: Command, configManager: Confi
 
   workspaces.command("start <issueId>").description("Start a new workspace for an issue")
     .action(async (issueId: string) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Starting workspace...");
       try {
-        const s = spinner("Starting workspace..."); s.start();
-        const ws = await client.startWorkspace(toIssueId(issueId)); s.stop();
+        const { client, opts } = getClientAndOpts();
+        s.start();
+        const ws = await client.startWorkspace(toIssueId(issueId));
+        s.stop();
         console.log(color.success(`Workspace created: ${ws.id}`));
         console.log(formatSingle(ws as unknown as Record<string, unknown>, opts.output));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }
@@ -75,16 +70,20 @@ export function registerWorkspacesCommand(program: Command, configManager: Confi
   workspaces.command("delete <id>").description("Delete a workspace")
     .option("--force", "Skip confirmation")
     .action(async (id: string, cmdOpts: { force?: boolean }) => {
-      const { client, opts } = getClientAndOpts();
+      const s = spinner("Deleting workspace...");
       try {
+        const { client, opts } = getClientAndOpts();
         if (!cmdOpts.force) {
           const ok = await confirm(`Delete workspace ${id}?`);
           if (!ok) { console.log("Aborted."); return; }
         }
-        const s = spinner("Deleting workspace..."); s.start();
-        await client.deleteWorkspace(toWorkspaceId(id)); s.stop();
+        s.start();
+        await client.deleteWorkspace(toWorkspaceId(id));
+        s.stop();
         console.log(color.success(`Workspace ${id} deleted.`));
       } catch (err) {
+        s.stop();
+        const opts = program.opts<{ verbose?: boolean }>();
         if (err instanceof Error) { printError(err.message); if (opts.verbose) console.error(err.stack); }
         process.exit((err as { exitCode?: number }).exitCode ?? 1);
       }

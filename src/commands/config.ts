@@ -26,6 +26,16 @@ export function registerConfigCommand(program: Command, configManager: ConfigMan
     .requiredOption("--token <token>", "JWT token")
     .option("--default-project <id>", "Default project ID")
     .action((name: string, opts: { url: string; token: string; defaultProject?: string }) => {
+      try {
+        new URL(opts.url);
+      } catch {
+        printError("Invalid URL. Include the protocol (e.g., https://kanban.example.com).");
+        process.exit(5);
+      }
+      const parsed = new URL(opts.url);
+      if (parsed.protocol !== "https:") {
+        console.error(color.warn("Warning: URL is not HTTPS. Token will be sent over an unencrypted connection."));
+      }
       const ctx: import("../config/manager.js").ContextConfig = { url: opts.url, token: opts.token };
       if (opts.defaultProject !== undefined) ctx.defaultProject = opts.defaultProject;
       configManager.addContext(name, ctx);
