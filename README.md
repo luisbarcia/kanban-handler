@@ -4,7 +4,7 @@ CLI for managing [Vibe Kanban](https://github.com/vibekanban) boards on self-hos
 
 [![CI](https://github.com/luisbarcia/kanban-handler/actions/workflows/ci.yml/badge.svg)](https://github.com/luisbarcia/kanban-handler/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Node >= 18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](package.json)
+[![Node >= 20](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](package.json)
 
 <!-- TODO: Record a demo with asciinema or vhs (https://github.com/charmbracelet/vhs)
      Run: asciinema rec demo.cast
@@ -19,7 +19,7 @@ CLI for managing [Vibe Kanban](https://github.com/vibekanban) boards on self-hos
 - **Multiple output formats** — `table`, `json`, and `minimal` for scripting and piping
 - **Automatic retry** — retries on 5xx and network errors with exponential backoff
 - **Secure by default** — warns on non-HTTPS URLs, branded types prevent ID mix-ups at compile time
-- **Zero HTTP dependencies** — uses Node.js native `fetch` (18+)
+- **Zero HTTP dependencies** — uses Node.js native `fetch` (20+)
 
 ## Quick Start
 

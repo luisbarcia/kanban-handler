@@ -96,14 +96,14 @@ jobs:
       - name: Lint
         run: npm run lint
 
-  # ── Tests (matrix: Node 18, 20, 22) ───────────────────────
+  # ── Tests (matrix: Node 20, 22) ───────────────────────────
   test:
     name: Test (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       matrix:
-        node: [18, 20, 22]
+        node: [20, 22]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
