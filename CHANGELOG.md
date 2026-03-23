@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/luisbarcia/kanban-handler/compare/v1.0.0...v1.0.1) (2026-03-23)
+
+
+### Bug Fixes
+
+* resolve --token flag conflict and read version from package.json ([f5ce345](https://github.com/luisbarcia/kanban-handler/commit/f5ce3453430c0eaa9e419f70e01d0bdc0514dfb2))
+
 ## 1.0.0 (2026-03-23)
 
 
