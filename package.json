@@ -14,9 +14,9 @@
     "format": "prettier --write src/",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["kanban", "cli", "vibe-kanban", "project-management", "self-hosted"],
+  "author": "Luis Barcia",
+  "license": "MIT",
   "dependencies": {
     "chalk": "^5.6.2",
     "cli-table3": "^0.6.5",
